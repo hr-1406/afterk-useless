@@ -8,6 +8,9 @@ importScripts(
 // Initialize Tracker
 self.Tracker.init();
 
+// Expose static config to storage for dashboard UI
+chrome.storage.local.set({ configPunishmentDuration: self.CONFIG.PUNISHMENT_DURATION });
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_CURRENT_INFO') {
     (async () => {

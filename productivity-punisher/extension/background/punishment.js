@@ -77,3 +77,31 @@ self.Punishment = Punishment;
 chrome.webNavigation.onCommitted.addListener((details) => {
   Punishment.monitorNavigation(details);
 });
+
+// Re-open a new punishment video if the user closes the punishment video tab
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const data = await chrome.storage.local.get(['punishmentActive']);
+  if (!data.punishmentActive) return;
+
+  const tabs = await chrome.tabs.query({});
+  let hasPunishmentVideo = false;
+  
+  for (const tab of tabs) {
+    if (tab.url && tab.url.includes('youtube.com/watch')) {
+      for (const vid of self.CONFIG.PUNISHMENT_VIDEOS) {
+        if (tab.url.includes(`v=${vid}`)) {
+          hasPunishmentVideo = true;
+          break;
+        }
+      }
+    }
+    if (hasPunishmentVideo) break;
+  }
+
+  if (!hasPunishmentVideo) {
+    const videos = self.CONFIG.PUNISHMENT_VIDEOS;
+    const videoId = videos[Math.floor(Math.random() * videos.length)];
+    await chrome.storage.local.set({ currentPunishmentVideo: videoId });
+    Punishment.enforcePunishment(null, videoId);
+  }
+});

@@ -200,27 +200,19 @@ function checkPunishment() {
 }
 
 function updatePunishmentTime() {
-  // Try to fetch PUNISHMENT_DURATION, default to 10 minutes if not found (though it should be in background)
-  // We can just query background for config, or hardcode the target based on DEMO_MODE.
-  // We can just get accumulated time from state.
   const elapsed = currentState.accumulatedQualifyingTime || 0;
+  const duration = currentState.configPunishmentDuration || 300000;
+  const remaining = Math.max(0, duration - elapsed);
   
-  // Actually, we don't know PUNISHMENT_DURATION here unless we ask for it or store it.
-  // Let's ask background for it.
-  chrome.runtime.getBackgroundPage((bg) => {
-    const duration = bg ? bg.CONFIG.PUNISHMENT_DURATION : 600000;
-    const remaining = Math.max(0, duration - elapsed);
-    
-    const maxMins = Math.floor(duration / 60000);
-    const maxSecs = Math.floor((duration % 60000) / 1000);
-    const maxStr = `${maxMins.toString().padStart(2, '0')}:${maxSecs.toString().padStart(2, '0')}`;
-    
-    const remMins = Math.floor(remaining / 60000);
-    const remSecs = Math.floor((remaining % 60000) / 1000);
-    const remStr = `${remMins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}`;
-    
-    document.getElementById('punishmentCountdown').textContent = `${remStr} / ${maxStr}`;
-  });
+  const maxMins = Math.floor(duration / 60000);
+  const maxSecs = Math.floor((duration % 60000) / 1000);
+  const maxStr = `${maxMins.toString().padStart(2, '0')}:${maxSecs.toString().padStart(2, '0')}`;
+  
+  const remMins = Math.floor(remaining / 60000);
+  const remSecs = Math.floor((remaining % 60000) / 1000);
+  const remStr = `${remMins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}`;
+  
+  document.getElementById('punishmentCountdown').textContent = `${remStr} / ${maxStr}`;
 }
 
 // Initialization
