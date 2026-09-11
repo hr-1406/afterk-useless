@@ -37,7 +37,7 @@ const Scoring = {
     return 'Neutral';
   },
 
-  async addPoints(domain, classification, completedIntervals, tabId) {
+  async addPoints(domain, classification, completedIntervals) {
     if (completedIntervals <= 0) return;
 
     let pointsChange = 0;
@@ -71,7 +71,7 @@ const Scoring = {
     await this.updateState(updates);
 
     if (pointsChange !== 0) {
-      this.notifyTab(domain, pointsChange, classification, historyEntry.duration, tabId, newScore);
+      this.notifyTab(domain, pointsChange, classification, historyEntry.duration);
     }
 
     if (newScore <= 0 && !state.punishmentActive) {
@@ -79,13 +79,16 @@ const Scoring = {
     }
   },
 
-  notifyTab(domain, pointsChange, classification, durationSeconds, tabId, totalScore) {
-    if (!tabId) return;
-    chrome.tabs.sendMessage(tabId, {
-      type: 'POINT_UPDATE',
-      payload: { pointsChange, domain, classification, durationSeconds, totalScore }
-    }).catch(() => {
-      // Ignore errors if content script not loaded (e.g., restricted pages)
+  notifyTab(domain, pointsChange, classification, durationSeconds) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0] && tabs[0].id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: 'POINT_UPDATE',
+          payload: { pointsChange, domain, classification, durationSeconds }
+        }).catch(() => {
+          // Ignore errors if content script not loaded (e.g., restricted pages)
+        });
+      }
     });
   }
 };
