@@ -1,23 +1,23 @@
 /* Productivity Punisher Content Styles */
 
 .pp-toast {
-  position: fixed;
-  top: 20px;
-  right: -300px;
-  width: 250px;
-  padding: 16px;
-  border-radius: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  z-index: 2147483647; /* Max z-index */
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  position: fixed !important;
+  top: 20px !important;
+  right: -300px !important;
+  width: 250px !important;
+  padding: 16px !important;
+  border-radius: 8px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  z-index: 2147483647 !important; /* Max z-index */
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
 }
 
 .pp-toast.pp-show {
-  right: 20px;
+  right: 20px !important;
 }
 
 .pp-toast-productive {

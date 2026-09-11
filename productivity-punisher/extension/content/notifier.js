@@ -14,12 +14,22 @@ function showToast({ pointsChange, domain, classification, durationSeconds, tota
   const offset = 20 + (activeToasts * 100);
   toast.style.top = `${offset}px`;
   
+  const pointsDiv = document.createElement('div');
+  pointsDiv.className = 'pp-toast-points';
   const sign = pointsChange > 0 ? '+' : '';
-  const pointsHTML = `<div class="pp-toast-points">${sign}${pointsChange} POINTS</div>`;
-  const domainHTML = `<div class="pp-toast-domain">${domain}</div>`;
-  const timeHTML = `<div class="pp-toast-time">${durationSeconds} seconds &bull; Total: ${totalScore}</div>`;
-  
-  toast.innerHTML = pointsHTML + domainHTML + timeHTML;
+  pointsDiv.textContent = `${sign}${pointsChange} POINTS`;
+
+  const domainDiv = document.createElement('div');
+  domainDiv.className = 'pp-toast-domain';
+  domainDiv.textContent = domain;
+
+  const timeDiv = document.createElement('div');
+  timeDiv.className = 'pp-toast-time';
+  timeDiv.textContent = `${durationSeconds} seconds \u2022 Total: ${totalScore}`;
+
+  toast.appendChild(pointsDiv);
+  toast.appendChild(domainDiv);
+  toast.appendChild(timeDiv);
   document.body.appendChild(toast);
   
   activeToasts++;
