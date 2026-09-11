@@ -47,22 +47,19 @@ For Software:
 For Software:
 
 # Screenshots (Add at least 3)
-![Dashboard](https://via.placeholder.com/800x400?text=Dashboard+UI)
+![Dashboard](https://drive.google.com/file/d/1TjOjn4nhzh3Xo9gv8JWAwymHXL1oPNXo/view?usp=sharing)
 *The main dashboard tracking your points and active session.*
 
-![Punishment Mode](https://via.placeholder.com/800x400?text=Punishment+Active)
+![Punishment Mode](https://drive.google.com/file/d/1onSLe2tXrwkiGu7TXlweBDu92dy80CZG/view?usp=sharing)
 *You've been caught! The 5-minute forced YouTube session begins.*
 
-![Settings](https://via.placeholder.com/800x400?text=Custom+Website+Lists)
-*Customize which sites are considered productive (bad) and unproductive (good).*
-
 # Diagrams
-![Workflow](https://via.placeholder.com/800x400?text=Architecture+Diagram)
+![Workflow](https://drive.google.com/file/d/1mWhECVQh9iZiY064Dcdpr7ltvCylzsqw/view?usp=drive_link)
 *The background service worker constantly monitors your active tab and calculates intervals to adjust your score.*
 
 ### Project Demo
 # Video
-[Add your demo video link here]
+https://drive.google.com/file/d/1mmRNy1coPASf4X0R9QO-60DpiEutnhae/view?usp=sharing
 *A walkthrough of the extension penalizing a user and forcing them into punishment.*
 
 ## Team Contributions
