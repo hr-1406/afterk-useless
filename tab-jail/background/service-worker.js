@@ -191,4 +191,35 @@ chrome.runtime.onMessage.addListener((message, sender) => {
     }
 });
 
-// Persistent HUD toggled via options.html instead of toolbar click
+// =============================================================
+// Toolbar Icon → Toggle Standalone Popup Window
+// =============================================================
+let popupWindowId = null;
+
+chrome.action.onClicked.addListener(async () => {
+    try {
+        // If the window is already open, focus it
+        if (popupWindowId !== null) {
+            try {
+                await chrome.windows.update(popupWindowId, { focused: true });
+                return;
+            } catch (e) {
+                // Window was closed manually by the user
+                popupWindowId = null;
+            }
+        }
+
+        // Open a new standalone popup window
+        const win = await chrome.windows.create({
+            url: "popup/popup.html",
+            type: "popup",
+            width: 320,
+            height: 450,
+            focused: true
+        });
+        popupWindowId = win.id;
+    } catch (err) {
+        console.error("TAB JAIL popup creation error:", err);
+    }
+});
+

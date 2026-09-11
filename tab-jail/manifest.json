@@ -6,9 +6,7 @@
   "background": {
     "service_worker": "background/service-worker.js"
   },
-  "action": {
-    "default_popup": "popup/popup.html"
-  },
+  "action": {},
   "options_page": "options/options.html",
   "content_scripts": [
     {
