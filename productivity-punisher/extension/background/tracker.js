@@ -55,7 +55,7 @@ const Tracker = {
       const url = new URL(tab.url);
       let domain = url.hostname.replace(/^www\./, '');
       
-      if (domain !== this.activeDomain) {
+      if (domain !== this.activeDomain || this.activeTabId !== this.sessionTabId) {
         await this.endSession();
         this.startSession(domain);
       }
