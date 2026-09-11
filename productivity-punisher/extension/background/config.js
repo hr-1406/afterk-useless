@@ -1,9 +1,9 @@
 const DEMO_MODE = true; // If true, use demo durations and scoring intervals
 
 const CONFIG = {
-  SCORING_INTERVAL: DEMO_MODE ? 1000 : 10000, // 1 sec for demo, 10 secs for prod
+  SCORING_INTERVAL: DEMO_MODE ? 1000 : 20000, // 1 sec for demo, 20 secs for prod
   INITIAL_SCORE: 20,
-  PUNISHMENT_DURATION: DEMO_MODE ? 30000 : 300000, // 30 secs for demo, 5 mins for prod
+  PUNISHMENT_DURATION: DEMO_MODE ? 30000 : 600000, // 30 secs for demo, 10 mins for prod
   PUNISHMENT_VIDEOS: [
     "dQw4w9WgXcQ",
     "3wVvwd4oI1Y",
@@ -13,7 +13,7 @@ const CONFIG = {
   ],
   POINTS: {
     PRODUCTIVE: -10,
-    UNPRODUCTIVE: 2,
+    UNPRODUCTIVE: 5,
     NEUTRAL: 0
   },
   DEFAULT_PRODUCTIVE: [

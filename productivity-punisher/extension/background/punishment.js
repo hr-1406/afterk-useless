@@ -44,14 +44,28 @@ const Punishment = {
     const dashboardUrl = chrome.runtime.getURL('dashboard/index.html');
     const requiredVideoStr = `v=${data.currentPunishmentVideo}`;
     
-    // Allow navigation to the dashboard or to the exact YouTube video
+    // Allow navigation to the dashboard or to any of the allowed YouTube videos
     if (details.frameId === 0) {
       const isDashboard = details.url.includes(dashboardUrl);
-      const isYouTubeVideo = details.url.includes('youtube.com/watch') && details.url.includes(requiredVideoStr);
       
-      if (!isDashboard && !isYouTubeVideo) {
-        // Redirect back to punishment
+      let isAllowedVideo = false;
+      let matchedVid = null;
+      if (details.url.includes('youtube.com/watch')) {
+        for (const vid of self.CONFIG.PUNISHMENT_VIDEOS) {
+          if (details.url.includes(`v=${vid}`)) {
+            isAllowedVideo = true;
+            matchedVid = vid;
+            break;
+          }
+        }
+      }
+      
+      if (!isDashboard && !isAllowedVideo) {
+        // Redirect back to the last valid punishment video they were on
         chrome.tabs.update(details.tabId, { url: `https://www.youtube.com/watch?v=${data.currentPunishmentVideo}` });
+      } else if (matchedVid && matchedVid !== data.currentPunishmentVideo) {
+        // Update their current punishment video so we redirect them back here if they stray
+        chrome.storage.local.set({ currentPunishmentVideo: matchedVid });
       }
     }
   }

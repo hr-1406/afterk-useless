@@ -96,9 +96,16 @@ const Tracker = {
     const data = await chrome.storage.local.get(['punishmentActive', 'currentPunishmentVideo', 'accumulatedQualifyingTime']);
     
     if (data.punishmentActive) {
-      // Check if they are on the right video
-      const requiredVideoStr = `v=${data.currentPunishmentVideo}`;
-      const isYouTubeVideo = this.activeUrl.includes('youtube.com/watch') && this.activeUrl.includes(requiredVideoStr);
+      // Check if they are on any of the allowed videos
+      let isYouTubeVideo = false;
+      if (this.activeUrl.includes('youtube.com/watch')) {
+        for (const vid of self.CONFIG.PUNISHMENT_VIDEOS) {
+          if (this.activeUrl.includes(`v=${vid}`)) {
+            isYouTubeVideo = true;
+            break;
+          }
+        }
+      }
       
       if (isYouTubeVideo) {
         const newAccumulated = (data.accumulatedQualifyingTime || 0) + elapsed;
