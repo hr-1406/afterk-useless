@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "TAB JAIL",
+  "version": "1.0.0",
+  "description": "A ridiculous productivity enforcement Chrome extension that traps you when you procrastinate.",
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "action": {},
+  "options_page": "options/options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/activity-tracker.js",
+        "content/tab-jail-hud.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content/tab-jail-hud.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "permissions": [
+    "tabs",
+    "storage"
+  ]
+}

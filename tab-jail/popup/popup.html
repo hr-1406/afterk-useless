@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAB JAIL Popup</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TAB JAIL</h1>
+            <p class="subtitle">Your productivity prison awaits.</p>
+        </header>
+
+        <!-- Notification Banner -->
+        <div id="notification-banner" class="notification-banner"></div>
+        
+        <main>
+            <!-- Score Section -->
+            <div class="score-section">
+                <div class="score-header">PRODUCTIVITY SCORE</div>
+                <div class="score-value">
+                    <span id="score">50</span> <span class="score-max">/ 100</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="score-progress" style="width: 50%;"></div>
+                </div>
+            </div>
+
+            <div class="site-panel">
+                <div class="site-info">
+                    <span class="label">Current Website:</span>
+                    <div class="value site-name" id="current-website">Detecting...</div>
+                </div>
+                <div class="site-info">
+                    <span class="label">Category:</span>
+                    <div class="value site-category category-unknown" id="current-category">UNKNOWN</div>
+                </div>
+            </div>
+
+            <div class="stats-panel activity-panel">
+                <div class="stat">
+                    <span class="label">Activity:</span>
+                    <span class="value" id="current-activity">DETECTING...</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Last Activity:</span>
+                    <span class="value" id="last-activity">Just now</span>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <button id="settings-btn" class="action-btn">Open Settings</button>
+        </footer>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
