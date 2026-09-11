@@ -94,7 +94,7 @@ const Tracker = {
       const state = await self.Scoring.getState();
       const classification = self.Scoring.classifyDomain(this.activeDomain, state);
       
-      await self.Scoring.addPoints(this.activeDomain, classification, completedIntervals);
+      await self.Scoring.addPoints(this.activeDomain, classification, completedIntervals, this.activeTabId);
       
       // Advance session start time so we don't double count
       this.sessionStartTime += completedIntervals * self.CONFIG.SCORING_INTERVAL;
