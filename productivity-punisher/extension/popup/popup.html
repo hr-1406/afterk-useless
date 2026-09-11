@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Productivity Punisher</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h2>PRODUCTIVITY PUNISHER</h2>
+    
+    <div class="stat-box">
+      <span class="label">Score</span>
+      <span class="value score" id="scoreValue">--</span>
+    </div>
+
+    <div class="stat-box">
+      <span class="label">Current website</span>
+      <span class="value" id="currentWebsite">--</span>
+    </div>
+
+    <div class="stat-box">
+      <span class="label">Classification</span>
+      <span class="value" id="classification">--</span>
+    </div>
+
+    <div class="stat-box">
+      <span class="label">Tracking</span>
+      <span class="value active-tracking" id="trackingStatus">ACTIVE</span>
+    </div>
+
+    <button id="btnDashboard">Open Dashboard</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Productivity Punisher",
+  "version": "1.0",
+  "description": "Punishes productivity and rewards procrastination.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/notifier.js", "content/jumpscare.js"],
+      "css": ["content/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  }
+}

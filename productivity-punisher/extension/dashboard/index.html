@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Productivity Punisher</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  
+  <!-- Navigation Sidebar -->
+  <nav class="sidebar">
+    <div class="brand">
+      <h1>Punisher</h1>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#/" class="active" data-route="dashboard">Dashboard</a></li>
+      <li><a href="#/history" data-route="history">History</a></li>
+      <li><a href="#/settings" data-route="settings">Settings</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="content">
+    
+    <!-- VIEW: Dashboard -->
+    <section id="view-dashboard" class="view active">
+      <header>
+        <h2>Dashboard</h2>
+        <p class="subtitle">Monitor your score and current session</p>
+      </header>
+
+      <div class="grid cards-3">
+        <div class="card score-card">
+          <h3>CURRENT SCORE</h3>
+          <div class="score-display" id="dashScore">--</div>
+        </div>
+        
+        <div class="card">
+          <h3>CURRENT WEBSITE</h3>
+          <div class="value" id="dashWebsite">--</div>
+          <div class="badge" id="dashClassification">--</div>
+        </div>
+        
+        <div class="card">
+          <h3>TRACKING STATUS</h3>
+          <div class="value status-active" id="dashTracking">ACTIVE</div>
+        </div>
+      </div>
+
+      <h3 class="section-title">Today's Statistics</h3>
+      <div class="grid cards-4">
+        <div class="stat-item">
+          <span class="stat-label">Points Earned</span>
+          <span class="stat-value text-success" id="statEarned">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Points Lost</span>
+          <span class="stat-value text-danger" id="statLost">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Productive Sessions</span>
+          <span class="stat-value" id="statProdSessions">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Unproductive Sessions</span>
+          <span class="stat-value" id="statUnprodSessions">0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: History -->
+    <section id="view-history" class="view">
+      <header>
+        <h2>Activity History</h2>
+        <p class="subtitle">Recent point transactions</p>
+      </header>
+      
+      <div class="card">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Website</th>
+              <th>Duration</th>
+              <th>Points</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <!-- Rows injected via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW: Settings -->
+    <section id="view-settings" class="view">
+      <header>
+        <h2>Settings</h2>
+        <p class="subtitle">Configure domain classification and controls</p>
+      </header>
+      
+      <div class="grid cards-2">
+        <div class="card">
+          <h3>Custom Productive Domains</h3>
+          <p class="help-text">These domains will deduct points.</p>
+          <div class="input-group">
+            <input type="text" id="inputProductive" placeholder="e.g. docs.rs">
+            <button id="btnAddProductive">Add</button>
+          </div>
+          <ul class="domain-list" id="listProductive"></ul>
+        </div>
+        
+        <div class="card">
+          <h3>Custom Unproductive Domains</h3>
+          <p class="help-text">These domains will add points.</p>
+          <div class="input-group">
+            <input type="text" id="inputUnproductive" placeholder="e.g. twitter.com">
+            <button id="btnAddUnproductive">Add</button>
+          </div>
+          <ul class="domain-list" id="listUnproductive"></ul>
+        </div>
+      </div>
+
+      <div class="card danger-zone">
+        <h3>Danger Zone</h3>
+        <p class="help-text">Reset all local storage, scores, and history.</p>
+        <button id="btnResetAll" class="btn-danger">Reset All Data</button>
+      </div>
+    </section>
+
+    <!-- VIEW: Punishment (Full Screen Override) -->
+    <section id="view-punishment" class="view punishment-view">
+      <div class="punishment-overlay">
+        <h1 class="punishment-title">PUNISHMENT ACTIVE</h1>
+        <div class="countdown" id="punishmentCountdown">10:00</div>
+      </div>
+      <iframe id="gameIframe" src="" frameborder="0" allowfullscreen></iframe>
+    </section>
+
+  </main>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

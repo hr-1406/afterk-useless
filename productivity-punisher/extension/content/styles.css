@@ -1,0 +1,81 @@
+/* Productivity Punisher Content Styles */
+
+.pp-toast {
+  position: fixed;
+  top: 20px;
+  right: -300px;
+  width: 250px;
+  padding: 16px;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 2147483647; /* Max z-index */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pp-toast.pp-show {
+  right: 20px;
+}
+
+.pp-toast-productive {
+  background-color: #ef4444; /* red, losing points */
+  color: white;
+  border: 1px solid #b91c1c;
+}
+
+.pp-toast-unproductive {
+  background-color: #10b981; /* green, gaining points */
+  color: white;
+  border: 1px solid #047857;
+}
+
+.pp-toast-points {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.pp-toast-domain {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.pp-toast-time {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* Jumpscare Overlay */
+.pp-jumpscare-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: red;
+  z-index: 2147483647;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  color: white;
+  font-family: Impact, "Arial Black", sans-serif;
+  animation: pp-strobe 0.1s infinite;
+}
+
+.pp-jumpscare-text {
+  font-size: 100px;
+  text-transform: uppercase;
+  text-shadow: 0 0 20px black;
+}
+
+@keyframes pp-strobe {
+  0% { background-color: red; color: white; transform: scale(1); }
+  50% { background-color: black; color: red; transform: scale(1.05); }
+  100% { background-color: red; color: white; transform: scale(1); }
+}
