@@ -1,108 +1,84 @@
-let currentScore = 50;
-let hasReachedZero = false;
-let hasReachedMax = false;
+// =============================================================
+// TAB JAIL — Score Engine
+// =============================================================
+// Manages the productivity score [0..100].
+// Broadcasts SCORE_CHANGED to all tabs and the runtime.
 
-// Initialize score from storage
-chrome.storage.local.get(['score', 'punishmentTriggered', 'maxTriggered'], (data) => {
+let currentScore = 50;
+let breakEndTime = null;
+
+// Load persisted score on startup
+chrome.storage.local.get(['score', 'breakEndTime'], (data) => {
     if (data.score !== undefined) {
         currentScore = data.score;
     } else {
-        currentScore = 50;
         chrome.storage.local.set({ score: 50 });
     }
-    
-    if (data.punishmentTriggered !== undefined) {
-        hasReachedZero = data.punishmentTriggered;
-    }
-    
-    if (data.maxTriggered !== undefined) {
-        hasReachedMax = data.maxTriggered;
+    if (data.breakEndTime) {
+        breakEndTime = data.breakEndTime;
     }
 });
 
-export async function getScore() {
-    const data = await chrome.storage.local.get('score');
-    return data.score !== undefined ? data.score : 50;
-}
-
-export async function setScore(value) {
-    // Enforce bounds
-    let newScore = Math.max(0, Math.min(100, value));
-    let oldScore = currentScore;
-    currentScore = newScore;
-    
+async function saveAndBroadcast(oldScore, reason) {
+    const actualChange = currentScore - oldScore;
     await chrome.storage.local.set({ score: currentScore });
-    
-    // Check 0 transition
-    if (currentScore === 0 && oldScore > 0) {
-        hasReachedZero = true;
-        await chrome.storage.local.set({ punishmentTriggered: true });
-        notifyEvent("SCORE_ZERO", oldScore, currentScore, 0, "reached_zero");
-    } else if (currentScore > 0) {
-        hasReachedZero = false;
-        await chrome.storage.local.set({ punishmentTriggered: false });
+
+    // If we hit 100, start the break
+    if (currentScore === 100 && oldScore < 100) {
+        breakEndTime = Date.now() + 5 * 60 * 1000;
+        await chrome.storage.local.set({ breakEndTime, breakAvailable: true });
+        reason = "break_started";
     }
 
-    // Check 100 transition
-    if (currentScore === 100 && oldScore < 100) {
-        hasReachedMax = true;
-        await chrome.storage.local.set({ maxTriggered: true });
-        notifyEvent("SCORE_MAXED", oldScore, currentScore, 0, "reached_max");
-    } else if (currentScore < 100) {
-        hasReachedMax = false;
-        await chrome.storage.local.set({ maxTriggered: false });
-    }
-    
-    return currentScore;
+    if (actualChange === 0 && reason !== "break_started" && reason !== "break_ended") return;
+
+    console.log(`TAB JAIL SCORE: ${oldScore} -> ${currentScore} (${reason})`);
+
+    const eventData = {
+        type: "SCORE_CHANGED",
+        oldScore,
+        newScore: currentScore,
+        amount: actualChange,
+        reason
+    };
+
+    // Send to runtime listeners (popup if open) — catch rejection if nobody's listening
+    chrome.runtime.sendMessage(eventData).catch(() => {});
+
+    // Send to every tab's content scripts (for the HUD)
+    chrome.tabs.query({}, (tabs) => {
+        for (const tab of tabs) {
+            if (tab.id) {
+                chrome.tabs.sendMessage(tab.id, eventData).catch(() => {});
+            }
+        }
+    });
 }
 
 export async function addPoints(amount, reason) {
+    if (breakEndTime) return; // No productivity gain during break
     const oldScore = currentScore;
-    await setScore(oldScore + amount);
-    const actualChange = currentScore - oldScore;
-    
-    if (actualChange !== 0) {
-        console.log(`TAB JAIL SCORE:\n${oldScore} -> ${currentScore}\nREASON: ${reason}`);
-        notifyEvent("SCORE_CHANGED", oldScore, currentScore, actualChange, reason);
-    }
+    currentScore = Math.min(100, currentScore + amount);
+    await saveAndBroadcast(oldScore, reason);
 }
 
 export async function removePoints(amount, reason) {
+    if (breakEndTime) return; // No penalty during break
     const oldScore = currentScore;
-    await setScore(oldScore - amount);
-    const actualChange = currentScore - oldScore;
-    
-    if (actualChange !== 0) {
-        console.log(`TAB JAIL SCORE:\n${oldScore} -> ${currentScore}\nREASON: ${reason}`);
-        notifyEvent("SCORE_CHANGED", oldScore, currentScore, actualChange, reason);
-    }
+    currentScore = Math.max(0, currentScore - amount);
+    await saveAndBroadcast(oldScore, reason);
 }
 
-export async function resetScore(value) {
-    await setScore(value);
+export function getScore() {
+    return currentScore;
 }
 
-export function getScoreState() {
-    return {
-        score: currentScore,
-        hasReachedZero,
-        hasReachedMax
-    };
-}
-
-function notifyEvent(eventType, oldScore, newScore, amount, reason) {
-    const eventData = {
-        type: eventType,
-        oldScore: oldScore,
-        newScore: newScore,
-        amount: amount,
-        reason: reason
-    };
-    
-    // Broadcast to popup or other listeners
-    try {
-        chrome.runtime.sendMessage(eventData);
-    } catch (e) {
-        // Ignored if there are no listeners (e.g. popup closed)
+export async function checkBreakState() {
+    if (breakEndTime && Date.now() >= breakEndTime) {
+        breakEndTime = null;
+        const oldScore = currentScore;
+        currentScore = 50;
+        await chrome.storage.local.set({ breakEndTime: null, breakAvailable: false });
+        await saveAndBroadcast(oldScore, "break_ended");
     }
 }

@@ -1,8 +1,8 @@
+/* =============================================================
+   TAB JAIL — HUD Stylesheet (loaded inside Shadow DOM)
+   ============================================================= */
+
 #tab-jail-hud-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 2147483647;
     font-family: 'Courier New', Courier, monospace;
     pointer-events: auto;
 }
@@ -10,7 +10,7 @@
 #tab-jail-hud {
     background-color: #0d0d0d;
     border: 2px solid #333;
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+    box-shadow: 0 0 12px rgba(0, 255, 0, 0.25);
     color: #00ff00;
     width: 260px;
     padding: 15px;
@@ -20,6 +20,7 @@
     gap: 12px;
 }
 
+/* Header */
 #tab-jail-hud-header {
     display: flex;
     justify-content: space-between;
@@ -56,6 +57,7 @@
     border-color: #00ff00;
 }
 
+/* Minimized pill */
 #tab-jail-hud-minimized {
     background-color: #0d0d0d;
     border: 2px solid #00ff00;
@@ -63,6 +65,7 @@
     padding: 5px 10px;
     cursor: pointer;
     font-weight: bold;
+    font-family: 'Courier New', Courier, monospace;
     display: none;
 }
 
@@ -72,25 +75,31 @@
     flex-direction: column;
     gap: 3px;
 }
+
 .hud-label {
     font-size: 10px;
     opacity: 0.7;
     text-transform: uppercase;
 }
+
 .hud-value {
     font-size: 14px;
     font-weight: bold;
     word-break: break-all;
 }
+
+/* Score */
 .hud-score-row {
     display: flex;
     align-items: baseline;
     gap: 5px;
 }
+
 .hud-score-main {
     font-size: 24px;
     color: #00ff00;
 }
+
 .hud-score-max {
     font-size: 12px;
     opacity: 0.7;
@@ -104,26 +113,28 @@
     border: 1px solid #333;
     margin-top: 5px;
 }
+
 .hud-progress-fill {
     height: 100%;
     background-color: #00ff00;
     transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-/* Status colors */
-.hud-color-productive { color: #00ff00; }
+/* Category colors */
+.hud-color-productive  { color: #00ff00; }
 .hud-color-distracting { color: #ff003c; }
-.hud-color-unknown { color: #888; }
+.hud-color-unknown     { color: #888; }
 
-.hud-color-active { color: #00ff00; }
+/* Activity colors */
+.hud-color-active   { color: #00ff00; }
 .hud-color-inactive { color: #ff003c; animation: hud-blink 2s infinite; }
 
 @keyframes hud-blink {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    50%      { opacity: 0.5; }
 }
 
-/* Event Notification */
+/* Score notification banner */
 #hud-notification {
     position: absolute;
     top: -30px;
@@ -139,11 +150,15 @@
     pointer-events: none;
     transition: opacity 0.3s ease, transform 0.3s ease;
     transform: translateY(10px);
+    font-family: 'Courier New', Courier, monospace;
+    box-sizing: border-box;
 }
+
 #hud-notification.show {
     opacity: 1;
     transform: translateY(0);
 }
+
 #hud-notification.penalty {
     background-color: #ff003c;
     color: #fff;

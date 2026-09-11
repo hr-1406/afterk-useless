@@ -1,217 +1,259 @@
-// TAB JAIL HUD
-let isMinimized = false;
-let notificationTimer = null;
+// =============================================================
+// TAB JAIL — Persistent HUD (Content Script)
+// =============================================================
+// Injects a Shadow DOM panel into the webpage.
+// Visibility is controlled by `hudEnabled` in chrome.storage.local.
+// The toolbar icon toggles hudEnabled; this script reacts to it.
+//
+// Completely independent from:
+//   - scoring rules
+//   - activity tracker
+//   - website classifier
+//   - inactivity countdown
+//
+// This is purely a visualization layer.
 
-function timeAgo(timestamp) {
-    if (!timestamp) return "Unknown";
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    if (seconds < 2) return "Just now";
-    if (seconds < 60) return `${seconds}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m ago`;
-}
+(function () {
+    "use strict";
 
-let shadowRoot = null;
+    let shadowRoot = null;
+    let hostElement = null;
+    let notificationTimer = null;
 
-function initHUD() {
-    if (document.getElementById('tab-jail-panel-host')) return;
+    // --- Helpers ---
 
-    const host = document.createElement('div');
-    host.id = 'tab-jail-panel-host';
-    host.style.position = 'fixed';
-    host.style.top = '20px';
-    host.style.right = '20px';
-    host.style.zIndex = '2147483647';
-    host.style.display = 'none'; // Start hidden
-    host.style.pointerEvents = 'none'; // Will be overridden in shadow DOM wrapper
+    function timeAgo(ts) {
+        if (!ts) return "Unknown";
+        const s = Math.floor((Date.now() - ts) / 1000);
+        if (s < 2) return "Just now";
+        if (s < 60) return s + "s ago";
+        return Math.floor(s / 60) + "m ago";
+    }
 
-    document.documentElement.appendChild(host);
-    shadowRoot = host.attachShadow({mode: 'closed'});
+    // --- Build the HUD ---
 
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = chrome.runtime.getURL('content/tab-jail-hud.css');
-    shadowRoot.appendChild(link);
+    function buildHUD() {
+        // Prevent duplicates
+        if (document.getElementById('tab-jail-panel-host')) return;
 
-    const container = document.createElement('div');
-    container.id = 'tab-jail-hud-container';
-    
-    container.innerHTML = `
-        <div id="hud-notification"></div>
-        <div id="tab-jail-hud">
-            <div id="tab-jail-hud-header">
-                <h2>🔒 TAB JAIL</h2>
-                <div id="tab-jail-hud-controls">
-                    <button class="hud-btn" id="hud-btn-min">_</button>
-                    <button class="hud-btn" id="hud-btn-close">x</button>
+        hostElement = document.createElement('div');
+        hostElement.id = 'tab-jail-panel-host';
+        hostElement.style.cssText = 'position:fixed;top:20px;right:20px;z-index:2147483647;display:none;';
+        document.documentElement.appendChild(hostElement);
+
+        shadowRoot = hostElement.attachShadow({ mode: 'closed' });
+
+        // Load CSS inside shadow DOM
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = chrome.runtime.getURL('content/tab-jail-hud.css');
+        shadowRoot.appendChild(link);
+
+        // Build DOM
+        const wrapper = document.createElement('div');
+        wrapper.id = 'tab-jail-hud-container';
+        wrapper.innerHTML = `
+            <div id="hud-notification"></div>
+            <div id="tab-jail-hud">
+                <div id="tab-jail-break-banner" style="display:none; background: #00ff00; color: #000; padding: 10px; text-align: center; font-weight: bold; font-family: monospace; border-bottom: 2px solid #000;">
+                    100/100 — YOU EARNED A BREAK<br>
+                    <span id="tab-jail-break-time">05:00</span>
+                </div>
+                <div id="tab-jail-hud-header">
+                    <h2>🔒 TAB JAIL</h2>
+                    <div id="tab-jail-hud-controls">
+                        <button class="hud-btn" id="hud-btn-min">_</button>
+                        <button class="hud-btn" id="hud-btn-close">×</button>
+                    </div>
+                </div>
+                <div class="hud-block">
+                    <span class="hud-label">SCORE</span>
+                    <div class="hud-score-row">
+                        <span class="hud-score-main" id="hud-score">50</span>
+                        <span class="hud-score-max">/ 100</span>
+                    </div>
+                    <div class="hud-progress-bg">
+                        <div class="hud-progress-fill" id="hud-progress" style="width:50%"></div>
+                    </div>
+                </div>
+                <div class="hud-block">
+                    <span class="hud-label">WEBSITE</span>
+                    <span class="hud-value" id="hud-site">Detecting...</span>
+                </div>
+                <div class="hud-block">
+                    <span class="hud-label">CATEGORY</span>
+                    <span class="hud-value" id="hud-category">⚪ UNKNOWN</span>
+                </div>
+                <div class="hud-block">
+                    <span class="hud-label">ACTIVITY</span>
+                    <span class="hud-value" id="hud-activity">⚪ UNKNOWN</span>
+                </div>
+                <div class="hud-block">
+                    <span class="hud-label">LAST ACTIVITY</span>
+                    <span class="hud-value" id="hud-last-activity">Unknown</span>
                 </div>
             </div>
+            <button id="tab-jail-hud-minimized">🔒 TAB JAIL</button>
+        `;
+        shadowRoot.appendChild(wrapper);
 
-            <div class="hud-block">
-                <span class="hud-label">SCORE</span>
-                <div class="hud-score-row">
-                    <span class="hud-score-main" id="hud-score">50</span>
-                    <span class="hud-score-max">/ 100</span>
-                </div>
-                <div class="hud-progress-bg">
-                    <div class="hud-progress-fill" id="hud-progress" style="width: 50%;"></div>
-                </div>
-            </div>
+        // --- Controls ---
+        const hudPanel = shadowRoot.getElementById('tab-jail-hud');
+        const minBtn = shadowRoot.getElementById('tab-jail-hud-minimized');
 
-            <div class="hud-block">
-                <span class="hud-label">SITE</span>
-                <span class="hud-value" id="hud-site">Detecting...</span>
-                <span class="hud-value hud-color-unknown" id="hud-category">🟢 UNKNOWN</span>
-            </div>
+        shadowRoot.getElementById('hud-btn-min').addEventListener('click', () => {
+            hudPanel.style.display = 'none';
+            minBtn.style.display = 'block';
+        });
 
-            <div class="hud-block">
-                <span class="hud-label">ACTIVITY</span>
-                <span class="hud-value hud-color-unknown" id="hud-activity">🟢 UNKNOWN</span>
-            </div>
+        shadowRoot.getElementById('hud-btn-close').addEventListener('click', () => {
+            // Close = turn off persistent overlay globally
+            chrome.storage.local.set({ hudEnabled: false });
+        });
 
-            <div class="hud-block">
-                <span class="hud-label">LAST ACTIVITY</span>
-                <span class="hud-value" id="hud-last-activity">Unknown</span>
-            </div>
-        </div>
-        <button id="tab-jail-hud-minimized">🔒 TAB JAIL</button>
-    `;
+        minBtn.addEventListener('click', () => {
+            hudPanel.style.display = 'flex';
+            minBtn.style.display = 'none';
+        });
 
-    shadowRoot.appendChild(container);
+        // --- Initial data load ---
+        chrome.storage.local.get(
+            ['score', 'currentWebsite', 'currentCategory', 'activityState', 'lastActivityTime', 'hudEnabled', 'breakEndTime'],
+            (data) => {
+                hostElement.style.display = data.hudEnabled === true ? 'block' : 'none';
+                renderData(data);
+            }
+        );
 
-    const hud = shadowRoot.getElementById('tab-jail-hud');
-    const minBtn = shadowRoot.getElementById('tab-jail-hud-minimized');
+        // --- React to storage changes ---
+        chrome.storage.onChanged.addListener((changes, ns) => {
+            if (ns !== 'local') return;
 
-    shadowRoot.getElementById('hud-btn-min').addEventListener('click', () => {
-        hud.style.display = 'none';
-        minBtn.style.display = 'block';
-    });
+            // Toggle visibility
+            if (changes.hudEnabled) {
+                hostElement.style.display = changes.hudEnabled.newValue === true ? 'block' : 'none';
+            }
 
-    shadowRoot.getElementById('hud-btn-close').addEventListener('click', () => {
-        host.style.display = 'none';
-    });
+            // Re-render data fields
+            chrome.storage.local.get(
+                ['score', 'currentWebsite', 'currentCategory', 'activityState', 'lastActivityTime', 'breakEndTime'],
+                renderData
+            );
+        });
 
-    minBtn.addEventListener('click', () => {
-        hud.style.display = 'flex';
-        minBtn.style.display = 'none';
-    });
+        // --- Score notifications from the service worker ---
+        chrome.runtime.onMessage.addListener((msg) => {
+            if (msg.type === "SCORE_CHANGED") {
+                showNotification(msg);
+            }
+        });
 
-    // Read initial state
-    chrome.storage.local.get(['score', 'currentWebsite', 'currentCategory', 'activityState', 'lastActivityTime'], updateHUD);
+        // --- Tick "last activity" and break timer every second ---
+        setInterval(() => {
+            chrome.storage.local.get(['lastActivityTime', 'breakEndTime'], (d) => {
+                if (!shadowRoot) return;
+                const el = shadowRoot.getElementById('hud-last-activity');
+                if (el) el.textContent = timeAgo(d.lastActivityTime);
+                
+                if (d.breakEndTime && Date.now() < d.breakEndTime) {
+                    const remaining = Math.ceil((d.breakEndTime - Date.now()) / 1000);
+                    const min = Math.floor(remaining / 60);
+                    const sec = remaining % 60;
+                    const breakTimeEl = shadowRoot.getElementById('tab-jail-break-time');
+                    if (breakTimeEl) breakTimeEl.textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+                }
+            });
+        }, 1000);
+    }
 
-    // Listen to changes
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === 'local') {
-            chrome.storage.local.get(['score', 'currentWebsite', 'currentCategory', 'activityState', 'lastActivityTime'], updateHUD);
+    // --- Render data into the HUD ---
+
+    function renderData(data) {
+        if (!shadowRoot) return;
+
+        // Score
+        const score = data.score !== undefined ? data.score : 50;
+        const scoreEl = shadowRoot.getElementById('hud-score');
+        const progEl = shadowRoot.getElementById('hud-progress');
+        if (scoreEl) scoreEl.textContent = score;
+        if (progEl) {
+            progEl.style.width = score + '%';
+            progEl.style.backgroundColor = score < 30 ? '#ff003c' : score < 70 ? '#ffaa00' : '#00ff00';
         }
-    });
 
-    // Listen for messages from the service worker
-    chrome.runtime.onMessage.addListener((message) => {
-        if (message.type === "SCORE_CHANGED") {
-            showHudNotification(message);
-        } else if (message.type === "TOGGLE_TAB_JAIL_PANEL") {
-            if (host.style.display === 'none') {
-                host.style.display = 'block';
+        // Website
+        const siteEl = shadowRoot.getElementById('hud-site');
+        if (siteEl) siteEl.textContent = data.currentWebsite || "Unknown";
+
+        // Category
+        const catEl = shadowRoot.getElementById('hud-category');
+        if (catEl) {
+            const cat = (data.currentCategory || "unknown").toUpperCase();
+            const icon = cat === 'PRODUCTIVE' ? '🟢' : cat === 'DISTRACTING' ? '🔴' : '⚪';
+            catEl.textContent = icon + ' ' + cat;
+            catEl.className = 'hud-value hud-color-' + (data.currentCategory || 'unknown');
+        }
+
+        // Activity
+        const actEl = shadowRoot.getElementById('hud-activity');
+        if (actEl) {
+            const act = (data.activityState || "unknown").toUpperCase();
+            const icon = act === 'ACTIVE' ? '🟢' : act === 'INACTIVE' ? '🔴' : '⚪';
+            actEl.textContent = icon + ' ' + act;
+            actEl.className = 'hud-value hud-color-' + (data.activityState || 'unknown');
+        }
+
+        // Last activity
+        const lastEl = shadowRoot.getElementById('hud-last-activity');
+        if (lastEl) lastEl.textContent = timeAgo(data.lastActivityTime);
+        
+        // Break Banner
+        const breakBanner = shadowRoot.getElementById('tab-jail-break-banner');
+        if (breakBanner) {
+            if (data.breakEndTime && Date.now() < data.breakEndTime) {
+                breakBanner.style.display = 'block';
             } else {
-                host.style.display = 'none';
+                breakBanner.style.display = 'none';
             }
         }
-    });
+    }
 
-    // Update relative time
-    setInterval(() => {
-        chrome.storage.local.get(['lastActivityTime'], (data) => {
-            if (!shadowRoot) return;
-            const el = shadowRoot.getElementById('hud-last-activity');
-            if (el) el.textContent = timeAgo(data.lastActivityTime);
-        });
-    }, 1000);
-}
+    // --- Score change notification banner ---
 
-function showHudNotification(message) {
-    if (!shadowRoot) return;
-    const banner = shadowRoot.getElementById('hud-notification');
-    if (!banner) return;
-    
-    let text = "";
-    let type = "penalty";
-    if (message.amount > 0) {
-        text = `+${message.amount} PRODUCTIVITY BONUS`;
-        type = "bonus";
-    } else if (message.reason === "distraction_penalty") {
-        text = `${message.amount} DIGITAL BETRAYAL`;
-    } else if (message.reason === "inactivity_penalty") {
-        text = `${message.amount} INACTIVITY PENALTY`;
+    function showNotification(msg) {
+        if (!shadowRoot) return;
+        const banner = shadowRoot.getElementById('hud-notification');
+        if (!banner) return;
+
+        let text, type;
+        if (msg.amount > 0) {
+            text = '+' + msg.amount + ' PRODUCTIVITY BONUS';
+            type = 'bonus';
+        } else if (msg.reason === 'distraction_penalty') {
+            text = msg.amount + ' DIGITAL BETRAYAL';
+            type = 'penalty';
+        } else if (msg.reason === 'inactivity_penalty') {
+            text = msg.amount + ' INACTIVITY PENALTY';
+            type = 'penalty';
+        } else {
+            text = msg.amount + ' POINTS';
+            type = 'penalty';
+        }
+
+        banner.textContent = text;
+        banner.className = type === 'bonus' ? 'show' : 'show penalty';
+
+        clearTimeout(notificationTimer);
+        notificationTimer = setTimeout(() => {
+            banner.className = '';
+        }, 3000);
+    }
+
+    // --- Initialize ---
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', buildHUD);
     } else {
-        text = `${message.amount} POINTS`;
+        buildHUD();
     }
-    
-    banner.textContent = text;
-    banner.className = type === 'bonus' ? 'show' : 'show penalty';
-    
-    clearTimeout(notificationTimer);
-    notificationTimer = setTimeout(() => {
-        banner.className = banner.className.replace('show', '').trim();
-    }, 3000);
-}
-
-function updateHUD(data) {
-    if (!shadowRoot) return;
-    const scoreVal = data.score !== undefined ? data.score : 50;
-    const scoreEl = shadowRoot.getElementById('hud-score');
-    const progEl = shadowRoot.getElementById('hud-progress');
-    
-    if (scoreEl) scoreEl.textContent = scoreVal;
-    if (progEl) {
-        progEl.style.width = scoreVal + '%';
-        if (scoreVal < 30) progEl.style.backgroundColor = '#ff003c';
-        else if (scoreVal < 70) progEl.style.backgroundColor = '#ffaa00';
-        else progEl.style.backgroundColor = '#00ff00';
-    }
-
-    const siteEl = shadowRoot.getElementById('hud-site');
-    if (siteEl) siteEl.textContent = data.currentWebsite || "Unknown";
-
-    const catEl = shadowRoot.getElementById('hud-category');
-    if (catEl) {
-        const cat = (data.currentCategory || "unknown").toUpperCase();
-        if (cat === 'PRODUCTIVE') {
-            catEl.innerHTML = '🟢 ' + cat;
-            catEl.className = 'hud-value hud-color-productive';
-        } else if (cat === 'DISTRACTING') {
-            catEl.innerHTML = '🔴 ' + cat;
-            catEl.className = 'hud-value hud-color-distracting';
-        } else {
-            catEl.innerHTML = '⚪ ' + cat;
-            catEl.className = 'hud-value hud-color-unknown';
-        }
-    }
-
-    const actEl = shadowRoot.getElementById('hud-activity');
-    if (actEl) {
-        const act = (data.activityState || "unknown").toUpperCase();
-        if (act === 'ACTIVE') {
-            actEl.innerHTML = '🟢 ' + act;
-            actEl.className = 'hud-value hud-color-active';
-        } else if (act === 'INACTIVE') {
-            actEl.innerHTML = '🔴 ' + act;
-            actEl.className = 'hud-value hud-color-inactive';
-        } else {
-            actEl.innerHTML = '⚪ ' + act;
-            actEl.className = 'hud-value hud-color-unknown';
-        }
-    }
-
-    const lastEl = shadowRoot.getElementById('hud-last-activity');
-    if (lastEl) {
-        lastEl.textContent = timeAgo(data.lastActivityTime);
-    }
-}
-
-// Safely initialize
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initHUD);
-} else {
-    initHUD();
-}
+})();

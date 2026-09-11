@@ -14,6 +14,55 @@
         </header>
 
         <main>
+            <!-- System Dashboard -->
+            <section class="config-section dashboard-section" style="border-color: #00ff00;">
+                <h2>Current System Status</h2>
+                
+                <!-- Score Display -->
+                <div class="score-section" style="margin: 15px 0;">
+                    <div style="font-family: 'Courier New', monospace; font-size: 14px; margin-bottom: 5px; color: #00ff00;">PRODUCTIVITY SCORE</div>
+                    <div style="font-size: 32px; font-weight: bold; color: #fff;">
+                        <span id="opt-score">50</span> <span style="font-size: 14px; opacity: 0.7;">/ 100</span>
+                    </div>
+                </div>
+
+                <!-- Break/Punishment state -->
+                <div id="opt-system-state-panel" style="display: none; padding: 10px; border: 1px dashed #ffaa00; margin-bottom: 15px;">
+                    <div id="opt-system-state-message" style="color: #ffaa00; font-weight: bold;">ON BREAK</div>
+                    <div id="opt-system-state-timer" style="font-size: 12px; margin-top: 5px;"></div>
+                </div>
+
+                <!-- Details -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: 'Courier New', monospace; font-size: 12px;">
+                    <div>
+                        <div style="opacity: 0.7;">Current Website:</div>
+                        <div id="opt-current-website" style="color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Detecting...</div>
+                    </div>
+                    <div>
+                        <div style="opacity: 0.7;">Category:</div>
+                        <div id="opt-current-category" style="color: #fff;">UNKNOWN</div>
+                    </div>
+                    <div>
+                        <div style="opacity: 0.7;">Activity:</div>
+                        <div id="opt-current-activity" style="color: #fff;">DETECTING...</div>
+                    </div>
+                    <div>
+                        <div style="opacity: 0.7;">Last Activity:</div>
+                        <div id="opt-last-activity" style="color: #fff;">Just now</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="config-section">
+                <h2>Persistent Overlay Mode</h2>
+                <p>Show the TAB JAIL HUD directly on webpages so it stays visible while you browse.</p>
+                <label class="toggle-label">
+                    <input type="checkbox" id="hud-enabled-toggle">
+                    <span class="toggle-text">Enable Persistent Overlay</span>
+                </label>
+                <p class="toggle-status" id="hud-status">OFF</p>
+            </section>
+
             <section class="config-section">
                 <h2>Productive Websites</h2>
                 <p class="placeholder-text">Placeholder: Add URLs that increase your score.</p>

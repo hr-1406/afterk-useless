@@ -62,6 +62,30 @@ function updateUI(data) {
     } else {
         progressBar.style.backgroundColor = '#00ff00'; // Green good
     }
+    
+    // System State (Break/Punishment)
+    const statePanel = document.getElementById('system-state-panel');
+    const stateMessage = document.getElementById('system-state-message');
+    const stateTimer = document.getElementById('system-state-timer');
+    
+    if (scoreVal === 0) {
+        statePanel.style.display = 'block';
+        statePanel.style.borderColor = '#ff003c';
+        stateMessage.style.color = '#ff003c';
+        stateMessage.textContent = 'PUNISHMENT ACTIVE (TETRIS)';
+        stateTimer.textContent = 'Clear 3 lines to escape.';
+    } else if (data.breakEndTime && data.breakEndTime > Date.now()) {
+        statePanel.style.display = 'block';
+        statePanel.style.borderColor = '#ffaa00';
+        stateMessage.style.color = '#ffaa00';
+        stateMessage.textContent = 'ON BREAK';
+        const remaining = Math.ceil((data.breakEndTime - Date.now()) / 1000);
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        stateTimer.textContent = `Time remaining: ${m}:${s.toString().padStart(2, '0')}`;
+    } else {
+        statePanel.style.display = 'none';
+    }
 
     // Website display
     websiteEl.textContent = data.currentWebsite || "Detecting...";
@@ -104,25 +128,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Load initial data including score
-    chrome.storage.local.get(['score', 'currentWebsite', 'currentCategory', 'activityState', 'lastActivityTime'], (data) => {
+    chrome.storage.local.get(['score', 'currentWebsite', 'currentCategory', 'activityState', 'lastActivityTime', 'breakEndTime'], (data) => {
         updateUI(data);
     });
 
     // Listen for changes in storage
     chrome.storage.onChanged.addListener((changes, namespace) => {
         if (namespace === 'local') {
-            chrome.storage.local.get(['score', 'currentWebsite', 'currentCategory', 'activityState', 'lastActivityTime'], (data) => {
+            chrome.storage.local.get(['score', 'currentWebsite', 'currentCategory', 'activityState', 'lastActivityTime', 'breakEndTime'], (data) => {
                 updateUI(data);
             });
         }
     });
 
-    // Continuously update the relative timestamp
+    // Continuously update the relative timestamp and break timer
     setInterval(() => {
-        chrome.storage.local.get(['lastActivityTime'], (data) => {
+        chrome.storage.local.get(['lastActivityTime', 'score', 'breakEndTime'], (data) => {
             const lastActivityEl = document.getElementById('last-activity');
             if (lastActivityEl) {
                 lastActivityEl.textContent = timeAgo(data.lastActivityTime);
+            }
+            
+            // Also update break timer if visible
+            const statePanel = document.getElementById('system-state-panel');
+            if (statePanel.style.display === 'block' && data.breakEndTime && data.breakEndTime > Date.now()) {
+                const remaining = Math.ceil((data.breakEndTime - Date.now()) / 1000);
+                const m = Math.floor(remaining / 60);
+                const s = remaining % 60;
+                document.getElementById('system-state-timer').textContent = `Time remaining: ${m}:${s.toString().padStart(2, '0')}`;
+            } else if (data.score > 0 && (!data.breakEndTime || data.breakEndTime <= Date.now())) {
+                statePanel.style.display = 'none';
             }
         });
     }, 1000);

@@ -1,0 +1,49 @@
+body {
+    background: #000;
+    color: #0f0;
+    font-family: monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+}
+
+#tetris-container {
+    text-align: center;
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #f00;
+}
+
+#game-board {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+canvas {
+    border: 2px solid #0f0;
+    background: #111;
+}
+
+#side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.panel-box {
+    border: 2px solid #0f0;
+    padding: 10px;
+    font-size: 1.5rem;
+}
+
+#status-msg {
+    color: #f00;
+    max-width: 150px;
+}

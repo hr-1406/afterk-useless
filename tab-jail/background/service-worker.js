@@ -1,56 +1,69 @@
+// =============================================================
+// TAB JAIL — Background Service Worker
+// =============================================================
+// Orchestrates: website classification, activity state, scoring,
+// and the toolbar toggle for the persistent HUD.
+
 import { classifyWebsite } from './website-classifier.js';
 import * as scoreEngine from './score-engine.js';
 
-console.log("TAB JAIL background service worker active");
+console.log("TAB JAIL service worker started");
 
-// Track active tab globally to ensure we only apply updates from the focused context
+// --- State ---
 let activeTabId = null;
 let currentWebsite = "Unknown";
 let currentCategory = "unknown";
 let isCurrentlyActive = false;
 
-// Timers for scoring
+// Scoring timers
 let productiveActiveSince = null;
 let productiveAccumulatedMs = 0;
 let inactivityStartedAt = null;
 
-// Initialize state from storage in case the service worker was restarted
-chrome.storage.local.get(['productiveAccumulatedMs', 'productiveActiveSince', 'inactivityStartedAt', 'currentCategory', 'currentWebsite'], (data) => {
-    if (data.productiveAccumulatedMs) productiveAccumulatedMs = data.productiveAccumulatedMs;
-    if (data.productiveActiveSince) productiveActiveSince = data.productiveActiveSince;
-    if (data.inactivityStartedAt) inactivityStartedAt = data.inactivityStartedAt;
-    if (data.currentCategory) currentCategory = data.currentCategory;
-    if (data.currentWebsite) currentWebsite = data.currentWebsite;
-});
+// Restore timer state after service worker restart
+chrome.storage.local.get(
+    ['productiveAccumulatedMs', 'productiveActiveSince', 'inactivityStartedAt', 'currentCategory', 'currentWebsite'],
+    (data) => {
+        if (data.productiveAccumulatedMs) productiveAccumulatedMs = data.productiveAccumulatedMs;
+        if (data.productiveActiveSince) productiveActiveSince = data.productiveActiveSince;
+        if (data.inactivityStartedAt) inactivityStartedAt = data.inactivityStartedAt;
+        if (data.currentCategory) currentCategory = data.currentCategory;
+        if (data.currentWebsite) currentWebsite = data.currentWebsite;
+    }
+);
 
-// For debugging ONLY: 10 seconds for testing. Restore to 60000 for production.
-const DEBUG_PRODUCTIVE_INTERVAL = 10000; 
+// Debug: 10s for testing productive bonus. Change to 60000 for production.
+const PRODUCTIVE_INTERVAL_MS = 10000;
 
+// =============================================================
+// Score Timer Processing
+// =============================================================
 async function processScoreTimers() {
+    await scoreEngine.checkBreakState();
     const now = Date.now();
-    
+
     if (currentCategory === 'productive') {
-        // Process productive time
+        // Productive bonus: +2 per interval of active time
         if (isCurrentlyActive && productiveActiveSince) {
             productiveAccumulatedMs += (now - productiveActiveSince);
-            productiveActiveSince = now; // roll forward
-            
-            while (productiveAccumulatedMs >= DEBUG_PRODUCTIVE_INTERVAL) {
-                productiveAccumulatedMs -= DEBUG_PRODUCTIVE_INTERVAL;
+            productiveActiveSince = now;
+
+            while (productiveAccumulatedMs >= PRODUCTIVE_INTERVAL_MS) {
+                productiveAccumulatedMs -= PRODUCTIVE_INTERVAL_MS;
                 await scoreEngine.addPoints(2, "productive_minute");
             }
         }
-        
-        // Process inactivity penalty
+
+        // Inactivity penalty: -1 per 30s inactive on productive site
         if (!isCurrentlyActive && inactivityStartedAt) {
-            while ((now - inactivityStartedAt) >= 30000) { // 30 seconds = -1 point
-                inactivityStartedAt += 30000; // roll forward safely
+            while ((now - inactivityStartedAt) >= 30000) {
+                inactivityStartedAt += 30000;
                 await scoreEngine.removePoints(1, "inactivity_penalty");
             }
         }
     }
-    
-    // Save timer state in case of suspend
+
+    // Persist timer state in case service worker suspends
     await chrome.storage.local.set({
         productiveActiveSince,
         productiveAccumulatedMs,
@@ -58,131 +71,137 @@ async function processScoreTimers() {
     });
 }
 
-// Tick every second to process timers reliably while SW is awake
+// Tick every second while the service worker is alive
 setInterval(processScoreTimers, 1000);
 
-async function updateActivityState(isActive, timestamp) {
-    // First, process any pending time before state changes to guarantee accuracy
+// =============================================================
+// Activity State
+// =============================================================
+async function updateActivityState(active, timestamp) {
     await processScoreTimers();
-    
     const now = timestamp || Date.now();
-    
-    if (isActive && !isCurrentlyActive) {
-        // Transition from inactive to active
+
+    if (active && !isCurrentlyActive) {
+        // Became active
         if (currentCategory === 'productive') {
             productiveActiveSince = now;
             inactivityStartedAt = null;
         }
-    } else if (!isActive && isCurrentlyActive) {
-        // Transition from active to inactive
+    } else if (!active && isCurrentlyActive) {
+        // Became inactive
         if (currentCategory === 'productive') {
             productiveActiveSince = null;
             inactivityStartedAt = now;
         }
     }
-    
-    isCurrentlyActive = isActive;
-    
+
+    isCurrentlyActive = active;
     await chrome.storage.local.set({
-        activityState: isActive ? "active" : "inactive",
+        activityState: active ? "active" : "inactive",
         lastActivityTime: now
     });
 }
 
+// =============================================================
+// Tab / Navigation Handling
+// =============================================================
 async function handleTabUpdate(tabId, isTabSwitch) {
     try {
         const tab = await chrome.tabs.get(tabId);
         if (!tab.url) return;
 
-        // Process previous state before switching away
         await processScoreTimers();
 
         const newCategory = classifyWebsite(tab.url);
         let newWebsite = "Unknown";
-        
+
         try {
-            const urlObj = new URL(tab.url);
-            newWebsite = urlObj.hostname;
-        } catch(e) {
+            newWebsite = new URL(tab.url).hostname;
+        } catch (e) {
             newWebsite = tab.url;
         }
 
-        if (newWebsite.startsWith("chrome://") || newWebsite.startsWith("brave://") || newWebsite.startsWith("about:")) {
-             newWebsite = "System Page";
+        if (/^(chrome|brave|edge|about):/.test(tab.url)) {
+            newWebsite = "System Page";
         }
 
-        console.log(`TAB JAIL WEBSITE\nURL: ${tab.url}\nCATEGORY: ${newCategory}`);
+        console.log(`TAB JAIL: ${newWebsite} → ${newCategory}`);
 
-        // Trigger distraction penalty ONLY on entry/switch
-        if (newCategory === 'distracting') {
-            if (isTabSwitch || currentCategory !== 'distracting') {
-                await scoreEngine.removePoints(5, "distraction_penalty");
-            }
+        // Distraction penalty on entry
+        if (newCategory === 'distracting' && (isTabSwitch || currentCategory !== 'distracting')) {
+            await scoreEngine.removePoints(5, "distraction_penalty");
         }
-        
+
         currentCategory = newCategory;
         currentWebsite = newWebsite;
         activeTabId = tabId;
 
         await chrome.storage.local.set({
-            currentWebsite: currentWebsite,
-            currentCategory: currentCategory
+            currentWebsite,
+            currentCategory
         });
+        
+        if (newCategory === 'productive') {
+            chrome.tabs.sendMessage(tabId, { type: "START_EYE_TRACKING" }).catch(()=>{});
+        } else {
+            chrome.tabs.sendMessage(tabId, { type: "STOP_EYE_TRACKING" }).catch(()=>{});
+        }
 
-        // Tab switch implies active interaction in the new tab; reset state
-        const now = Date.now();
-        productiveActiveSince = null; 
+        // Reset timers for new context
+        productiveActiveSince = null;
         inactivityStartedAt = null;
-        isCurrentlyActive = false; // Set false so updateActivityState detects transition
-        
-        await updateActivityState(true, now);
-        
+        isCurrentlyActive = false;
+        await updateActivityState(true, Date.now());
+
     } catch (error) {
-        console.error("TAB JAIL Error getting tab info:", error);
+        console.error("TAB JAIL tab update error:", error);
     }
 }
 
-// Detect when active tab changes
-chrome.tabs.onActivated.addListener((activeInfo) => {
-    handleTabUpdate(activeInfo.tabId, true);
+// Tab switched
+chrome.tabs.onActivated.addListener((info) => {
+    handleTabUpdate(info.tabId, true);
 });
 
-// Detect when tab navigates or updates (within the same tab)
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+// Tab navigated / loaded
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.url || changeInfo.status === 'complete') {
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs[0] && tabs[0].id === tabId) {
-                // Same tab ID means this is navigation, not a tab switch
                 handleTabUpdate(tabId, false);
             }
         });
     }
 });
 
-// Listen for activity from content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "USER_ACTIVITY") {
-        console.log(`TAB JAIL ACTIVITY EVENT RECEIVED [Tab ${sender.tab?.id}, TS ${message.timestamp}]`);
-        
-        if (sender.tab && sender.tab.id) {
-            // Strictly query the currently active tab to guard against suspended state and orphan tabs
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-                if (tabs[0] && tabs[0].id === sender.tab.id) {
-                    activeTabId = sender.tab.id;
-                    updateActivityState(message.isActive, message.timestamp).catch(err => {
-                        console.error("TAB JAIL Error in updateActivityState:", err);
-                    });
-                }
-            });
-        }
+// =============================================================
+// Activity Messages from Content Scripts
+// =============================================================
+chrome.runtime.onMessage.addListener((message, sender) => {
+    if (message.type === "USER_ACTIVITY" && sender.tab && sender.tab.id) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0] && tabs[0].id === sender.tab.id) {
+                activeTabId = sender.tab.id;
+                updateActivityState(message.isActive, message.timestamp).catch((err) => {
+                    console.error("TAB JAIL activity error:", err);
+                });
+            }
+        });
+    } else if (message.type === "PUNISHMENT_COMPLETE") {
+        scoreEngine.addPoints(50, "punishment_escaped").catch(console.error);
     }
 });
 
-// Listen for toolbar icon clicks
-chrome.action.onClicked.addListener((tab) => {
-    if (tab && tab.id) {
-        chrome.tabs.sendMessage(tab.id, { type: "TOGGLE_TAB_JAIL_PANEL" }).catch(err => {
-            console.error("TAB JAIL: Could not send toggle message. Content script might not be loaded.", err);
-        });
+// =============================================================
+// Toolbar Icon → Toggle Persistent HUD
+// =============================================================
+chrome.action.onClicked.addListener(async () => {
+    try {
+        const data = await chrome.storage.local.get(['hudEnabled']);
+        const newState = !(data.hudEnabled === true);
+        await chrome.storage.local.set({ hudEnabled: newState });
+        console.log(`TAB JAIL HUD toggled: ${newState}`);
+    } catch (err) {
+        console.error("TAB JAIL toggle error:", err);
     }
 });

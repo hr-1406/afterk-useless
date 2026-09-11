@@ -1,3 +1,8 @@
+// =============================================================
+// TAB JAIL — Website Classifier
+// =============================================================
+// Pure classification logic. No side effects, no storage, no DOM.
+
 const PRODUCTIVE_DOMAINS = [
     "chatgpt.com",
     "openai.com",
@@ -27,12 +32,12 @@ export function classifyWebsite(urlStr) {
     if (!urlStr || typeof urlStr !== 'string') {
         return "unknown";
     }
-    
-    // Safely handle special schemes
-    if (urlStr.startsWith("chrome://") || 
-        urlStr.startsWith("brave://") || 
-        urlStr.startsWith("edge://") || 
-        urlStr.startsWith("about:") || 
+
+    // Skip browser-internal pages
+    if (urlStr.startsWith("chrome://") ||
+        urlStr.startsWith("brave://") ||
+        urlStr.startsWith("edge://") ||
+        urlStr.startsWith("about:") ||
         urlStr.startsWith("file://")) {
         return "unknown";
     }
@@ -40,18 +45,11 @@ export function classifyWebsite(urlStr) {
     try {
         const url = new URL(urlStr);
         const hostname = url.hostname.toLowerCase();
-
-        // Exact match or subdomain match (e.g., www.youtube.com ends with .youtube.com)
         const isMatch = (domain, host) => host === domain || host.endsWith('.' + domain);
 
-        if (PRODUCTIVE_DOMAINS.some(domain => isMatch(domain, hostname))) {
-            return "productive";
-        }
-        if (DISTRACTING_DOMAINS.some(domain => isMatch(domain, hostname))) {
-            return "distracting";
-        }
+        if (PRODUCTIVE_DOMAINS.some(d => isMatch(d, hostname))) return "productive";
+        if (DISTRACTING_DOMAINS.some(d => isMatch(d, hostname))) return "distracting";
     } catch (e) {
-        // Invalid URL
         return "unknown";
     }
 
