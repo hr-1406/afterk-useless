@@ -71,7 +71,7 @@ const Scoring = {
     await this.updateState(updates);
 
     if (pointsChange !== 0) {
-      this.notifyTab(domain, pointsChange, classification, historyEntry.duration);
+      this.notifyTab(domain, pointsChange, classification, historyEntry.duration, newScore);
     }
 
     if (newScore <= 0 && !state.punishmentActive) {
@@ -79,12 +79,12 @@ const Scoring = {
     }
   },
 
-  notifyTab(domain, pointsChange, classification, durationSeconds) {
+  notifyTab(domain, pointsChange, classification, durationSeconds, totalScore) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0] && tabs[0].id) {
         chrome.tabs.sendMessage(tabs[0].id, {
           type: 'POINT_UPDATE',
-          payload: { pointsChange, domain, classification, durationSeconds }
+          payload: { pointsChange, domain, classification, durationSeconds, totalScore }
         }).catch(() => {
           // Ignore errors if content script not loaded (e.g., restricted pages)
         });
