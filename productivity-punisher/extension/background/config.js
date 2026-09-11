@@ -5,7 +5,7 @@ const CONFIG = {
   PUNISHMENT_URL: 'https://scratch.mit.edu/projects/105500895/fullscreen/', // A web Geometry Dash clone
   POINTS: {
     PRODUCTIVE: -5,
-    UNPRODUCTIVE: 2,
+    UNPRODUCTIVE: 15,
     NEUTRAL: 0
   },
   DEFAULT_PRODUCTIVE: [
