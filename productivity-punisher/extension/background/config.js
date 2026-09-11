@@ -1,11 +1,19 @@
+const DEMO_MODE = true; // If true, use demo durations and scoring intervals
+
 const CONFIG = {
-  SCORING_INTERVAL: 10000, // 10 seconds in ms
+  SCORING_INTERVAL: DEMO_MODE ? 1000 : 10000, // 1 sec for demo, 10 secs for prod
   INITIAL_SCORE: 20,
-  PUNISHMENT_DURATION: 600000, // 10 minutes in ms
-  PUNISHMENT_URL: 'https://scratch.mit.edu/projects/105500895/fullscreen/', // A web Geometry Dash clone
+  PUNISHMENT_DURATION: DEMO_MODE ? 30000 : 300000, // 30 secs for demo, 5 mins for prod
+  PUNISHMENT_VIDEOS: [
+    "dQw4w9WgXcQ",
+    "3wVvwd4oI1Y",
+    "kClwJxgmrgk",
+    "3h7hIvXv-cM",
+    "DmsTiMdkzsU"
+  ],
   POINTS: {
-    PRODUCTIVE: -5,
-    UNPRODUCTIVE: 15,
+    PRODUCTIVE: -10,
+    UNPRODUCTIVE: 2,
     NEUTRAL: 0
   },
   DEFAULT_PRODUCTIVE: [

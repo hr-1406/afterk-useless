@@ -183,58 +183,44 @@ function checkPunishment() {
     }
     document.body.classList.add('punishment-mode');
     
-    // Set iframe if not set
-    const iframe = document.getElementById('gameIframe');
-    if (!iframe.src) {
-      // Hardcode the fallback or fetch from config
-      // Fetching from background config via messaging is cleaner, but hardcoding the same constant is fine here
-      iframe.src = 'https://scratch.mit.edu/projects/105500895/fullscreen/';
+    // Update the video link
+    const videoId = currentState.currentPunishmentVideo;
+    if (videoId) {
+      document.getElementById('punishmentVideoLink').href = `https://www.youtube.com/watch?v=${videoId}`;
     }
 
-    startPunishmentTimer();
+    // Update time
+    updatePunishmentTime();
   } else {
     document.body.classList.remove('punishment-mode');
-    if (punishmentInterval) {
-      clearInterval(punishmentInterval);
-      punishmentInterval = null;
-    }
     if (window.location.hash === '#/punishment') {
       window.location.hash = '#/';
     }
   }
 }
 
-function startPunishmentTimer() {
-  if (punishmentInterval) clearInterval(punishmentInterval);
+function updatePunishmentTime() {
+  // Try to fetch PUNISHMENT_DURATION, default to 10 minutes if not found (though it should be in background)
+  // We can just query background for config, or hardcode the target based on DEMO_MODE.
+  // We can just get accumulated time from state.
+  const elapsed = currentState.accumulatedQualifyingTime || 0;
   
-  const duration = 600000; // 10 minutes
-
-  punishmentInterval = setInterval(async () => {
-    // Re-fetch to ensure we have latest timestamp in case of multiple windows
-    const data = await chrome.storage.local.get(['punishmentActive', 'punishmentStartTime']);
-    if (!data.punishmentActive) {
-      clearInterval(punishmentInterval);
-      return;
-    }
-
-    const elapsed = Date.now() - data.punishmentStartTime;
+  // Actually, we don't know PUNISHMENT_DURATION here unless we ask for it or store it.
+  // Let's ask background for it.
+  chrome.runtime.getBackgroundPage((bg) => {
+    const duration = bg ? bg.CONFIG.PUNISHMENT_DURATION : 600000;
     const remaining = Math.max(0, duration - elapsed);
-
-    if (remaining <= 0) {
-      clearInterval(punishmentInterval);
-      // Wait for background script to clear it, or clear it ourselves
-      await chrome.storage.local.set({ 
-        punishmentActive: false,
-        score: 20
-      });
-      alert('PUNISHMENT COMPLETE. You may return to your dashboard.');
-    } else {
-      const minutes = Math.floor(remaining / 60000);
-      const seconds = Math.floor((remaining % 60000) / 1000);
-      document.getElementById('punishmentCountdown').textContent = 
-        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-  }, 1000);
+    
+    const maxMins = Math.floor(duration / 60000);
+    const maxSecs = Math.floor((duration % 60000) / 1000);
+    const maxStr = `${maxMins.toString().padStart(2, '0')}:${maxSecs.toString().padStart(2, '0')}`;
+    
+    const remMins = Math.floor(remaining / 60000);
+    const remSecs = Math.floor((remaining % 60000) / 1000);
+    const remStr = `${remMins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}`;
+    
+    document.getElementById('punishmentCountdown').textContent = `${remStr} / ${maxStr}`;
+  });
 }
 
 // Initialization

@@ -1,8 +1,13 @@
 const Punishment = {
   async triggerPunishment() {
+    // Pick a random video
+    const videos = self.CONFIG.PUNISHMENT_VIDEOS;
+    const videoId = videos[Math.floor(Math.random() * videos.length)];
+
     await chrome.storage.local.set({
       punishmentActive: true,
-      punishmentStartTime: Date.now()
+      accumulatedQualifyingTime: 0,
+      currentPunishmentVideo: videoId
     });
     
     // Attempt to trigger jumpscare on the active tab
@@ -12,17 +17,19 @@ const Punishment = {
         await chrome.tabs.sendMessage(tabs[0].id, { type: 'TRIGGER_JUMPSCARE' });
         // Give jumpscare time to play before redirect
         setTimeout(() => {
-          this.enforcePunishment(tabs[0].id);
+          this.enforcePunishment(tabs[0].id, videoId);
         }, 1500);
       } catch (e) {
         // If content script fails or isn't injected, immediately enforce
-        this.enforcePunishment(tabs[0].id);
+        this.enforcePunishment(tabs[0].id, videoId);
       }
+    } else {
+      this.enforcePunishment(null, videoId);
     }
   },
 
-  async enforcePunishment(tabId) {
-    const punishmentUrl = chrome.runtime.getURL('dashboard/index.html#/punishment');
+  async enforcePunishment(tabId, videoId) {
+    const punishmentUrl = `https://www.youtube.com/watch?v=${videoId}`;
     if (tabId) {
       await chrome.tabs.update(tabId, { url: punishmentUrl });
     } else {
@@ -30,31 +37,22 @@ const Punishment = {
     }
   },
 
-  async checkPunishmentState() {
-    const data = await chrome.storage.local.get(['punishmentActive', 'punishmentStartTime']);
-    if (!data.punishmentActive) return false;
-
-    const elapsed = Date.now() - data.punishmentStartTime;
-    if (elapsed >= self.CONFIG.PUNISHMENT_DURATION) {
-      // Punishment over
-      await chrome.storage.local.set({ 
-        punishmentActive: false,
-        score: self.CONFIG.INITIAL_SCORE 
-      });
-      return false;
-    }
-    return true;
-  },
-
   async monitorNavigation(details) {
-    // If punishment is active, prevent leaving the punishment URL
-    const isPunishmentActive = await this.checkPunishmentState();
-    if (!isPunishmentActive) return;
+    const data = await chrome.storage.local.get(['punishmentActive', 'currentPunishmentVideo']);
+    if (!data.punishmentActive) return;
 
-    const punishmentPage = chrome.runtime.getURL('dashboard/index.html');
-    if (details.frameId === 0 && !details.url.includes(punishmentPage)) {
-      // Redirect back to punishment
-      chrome.tabs.update(details.tabId, { url: punishmentPage + '#/punishment' });
+    const dashboardUrl = chrome.runtime.getURL('dashboard/index.html');
+    const requiredVideoStr = `v=${data.currentPunishmentVideo}`;
+    
+    // Allow navigation to the dashboard or to the exact YouTube video
+    if (details.frameId === 0) {
+      const isDashboard = details.url.includes(dashboardUrl);
+      const isYouTubeVideo = details.url.includes('youtube.com/watch') && details.url.includes(requiredVideoStr);
+      
+      if (!isDashboard && !isYouTubeVideo) {
+        // Redirect back to punishment
+        chrome.tabs.update(details.tabId, { url: `https://www.youtube.com/watch?v=${data.currentPunishmentVideo}` });
+      }
     }
   }
 };

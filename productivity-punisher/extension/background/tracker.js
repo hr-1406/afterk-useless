@@ -1,5 +1,6 @@
 const Tracker = {
   activeDomain: null,
+  activeUrl: null,
   sessionStartTime: null,
   activeTabId: null,
 
@@ -10,7 +11,7 @@ const Tracker = {
     chrome.windows.onFocusChanged.addListener(this.onWindowFocusChanged.bind(this));
     
     // Periodically check in case of idle or missed events
-    setInterval(() => this.processCurrentSession(), 5000);
+    setInterval(() => this.processCurrentSession(), 2000); // Check every 2s for more responsive punishment timer
 
     // Initial check
     await this.checkActiveTab();
@@ -37,10 +38,6 @@ const Tracker = {
   },
 
   async checkActiveTab(prefetchedTab = null) {
-    // If punishment is active, don't do regular tracking
-    const isPunishment = await self.Punishment.checkPunishmentState();
-    if (isPunishment) return;
-
     let tab = prefetchedTab;
     if (!tab) {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -54,40 +51,89 @@ const Tracker = {
       const url = new URL(tab.url);
       let domain = url.hostname.replace(/^www\./, '');
       
-      if (domain !== this.activeDomain) {
+      if (domain !== this.activeDomain || tab.url !== this.activeUrl) {
         await this.endSession();
-        this.startSession(domain);
+        this.startSession(domain, tab.url);
       }
     } else {
       await this.endSession();
     }
   },
 
-  startSession(domain) {
+  startSession(domain, url) {
     this.activeDomain = domain;
+    this.activeUrl = url;
     this.sessionStartTime = Date.now();
   },
 
   async endSession() {
-    if (this.activeDomain && this.sessionStartTime) {
+    if (this.activeUrl && this.sessionStartTime) {
       await this.processCurrentSession();
       this.activeDomain = null;
+      this.activeUrl = null;
       this.sessionStartTime = null;
     }
   },
 
   async processCurrentSession() {
-    if (!this.activeDomain || !this.sessionStartTime) return;
+    if (!this.activeUrl || !this.sessionStartTime) return;
     
-    const isPunishment = await self.Punishment.checkPunishmentState();
-    if (isPunishment) {
-      this.activeDomain = null;
-      this.sessionStartTime = null;
+    // Detect if user is active before scoring
+    const idleState = await new Promise(resolve => {
+      chrome.idle.queryState(15, resolve);
+    });
+    
+    if (idleState === 'idle' || idleState === 'locked') {
+      // User is not active, do not accrue points or qualifying time.
+      // Advance sessionStartTime so we don't count the idle time when they return.
+      this.sessionStartTime = Date.now();
       return;
     }
 
     const now = Date.now();
     const elapsed = now - this.sessionStartTime;
+
+    const data = await chrome.storage.local.get(['punishmentActive', 'currentPunishmentVideo', 'accumulatedQualifyingTime']);
+    
+    if (data.punishmentActive) {
+      // Check if they are on the right video
+      const requiredVideoStr = `v=${data.currentPunishmentVideo}`;
+      const isYouTubeVideo = this.activeUrl.includes('youtube.com/watch') && this.activeUrl.includes(requiredVideoStr);
+      
+      if (isYouTubeVideo) {
+        const newAccumulated = (data.accumulatedQualifyingTime || 0) + elapsed;
+        
+        if (newAccumulated >= self.CONFIG.PUNISHMENT_DURATION) {
+          // Punishment over
+          await chrome.storage.local.set({ 
+            punishmentActive: false,
+            score: self.CONFIG.INITIAL_SCORE,
+            accumulatedQualifyingTime: self.CONFIG.PUNISHMENT_DURATION
+          });
+          // Notify user natively
+          chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            title: 'Productivity Punisher',
+            message: 'Punishment Complete! You may return to work.',
+            priority: 2
+          });
+          // Redirect them to dashboard
+          if (this.activeTabId) {
+             const dashboardUrl = chrome.runtime.getURL('dashboard/index.html');
+             chrome.tabs.update(this.activeTabId, { url: dashboardUrl });
+          }
+        } else {
+          await chrome.storage.local.set({ accumulatedQualifyingTime: newAccumulated });
+        }
+      }
+      
+      // Reset session start time to now so we don't double count
+      this.sessionStartTime = now;
+      return;
+    }
+
+    // Normal tracking
     const completedIntervals = Math.floor(elapsed / self.CONFIG.SCORING_INTERVAL);
 
     if (completedIntervals > 0) {
@@ -103,3 +149,4 @@ const Tracker = {
 };
 
 self.Tracker = Tracker;
+
