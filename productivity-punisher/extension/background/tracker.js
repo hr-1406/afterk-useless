@@ -1,6 +1,7 @@
 const Tracker = {
   activeDomain: null,
   sessionStartTime: null,
+  sessionTabId: null,
   activeTabId: null,
 
   async init() {
@@ -66,6 +67,7 @@ const Tracker = {
   startSession(domain) {
     this.activeDomain = domain;
     this.sessionStartTime = Date.now();
+    this.sessionTabId = this.activeTabId;
   },
 
   async endSession() {
@@ -73,6 +75,7 @@ const Tracker = {
       await this.processCurrentSession();
       this.activeDomain = null;
       this.sessionStartTime = null;
+      this.sessionTabId = null;
     }
   },
 
@@ -94,7 +97,7 @@ const Tracker = {
       const state = await self.Scoring.getState();
       const classification = self.Scoring.classifyDomain(this.activeDomain, state);
       
-      await self.Scoring.addPoints(this.activeDomain, classification, completedIntervals, this.activeTabId);
+      await self.Scoring.addPoints(this.activeDomain, classification, completedIntervals, this.sessionTabId);
       
       // Advance session start time so we don't double count
       this.sessionStartTime += completedIntervals * self.CONFIG.SCORING_INTERVAL;
