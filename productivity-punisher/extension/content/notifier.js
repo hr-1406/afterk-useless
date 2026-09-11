@@ -6,7 +6,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 let activeToasts = 0;
 
-function showToast({ pointsChange, domain, classification, durationSeconds }) {
+function showToast({ pointsChange, domain, classification, durationSeconds, totalScore }) {
   const toast = document.createElement('div');
   toast.className = `pp-toast ${pointsChange > 0 ? 'pp-toast-unproductive' : 'pp-toast-productive'}`;
   
@@ -17,7 +17,7 @@ function showToast({ pointsChange, domain, classification, durationSeconds }) {
   const sign = pointsChange > 0 ? '+' : '';
   const pointsHTML = `<div class="pp-toast-points">${sign}${pointsChange} POINTS</div>`;
   const domainHTML = `<div class="pp-toast-domain">${domain}</div>`;
-  const timeHTML = `<div class="pp-toast-time">${durationSeconds} seconds</div>`;
+  const timeHTML = `<div class="pp-toast-time">${durationSeconds} seconds &bull; Total: ${totalScore}</div>`;
   
   toast.innerHTML = pointsHTML + domainHTML + timeHTML;
   document.body.appendChild(toast);
