@@ -37,7 +37,10 @@ const Punishment = {
     const elapsed = Date.now() - data.punishmentStartTime;
     if (elapsed >= self.CONFIG.PUNISHMENT_DURATION) {
       // Punishment over
-      await chrome.storage.local.set({ punishmentActive: false });
+      await chrome.storage.local.set({ 
+        punishmentActive: false,
+        score: self.CONFIG.INITIAL_SCORE 
+      });
       return false;
     }
     return true;

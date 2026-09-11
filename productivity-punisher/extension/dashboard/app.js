@@ -223,7 +223,10 @@ function startPunishmentTimer() {
     if (remaining <= 0) {
       clearInterval(punishmentInterval);
       // Wait for background script to clear it, or clear it ourselves
-      await chrome.storage.local.set({ punishmentActive: false });
+      await chrome.storage.local.set({ 
+        punishmentActive: false,
+        score: 20
+      });
       alert('PUNISHMENT COMPLETE. You may return to your dashboard.');
     } else {
       const minutes = Math.floor(remaining / 60000);
