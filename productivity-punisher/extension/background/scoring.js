@@ -80,15 +80,17 @@ const Scoring = {
   },
 
   notifyTab(domain, pointsChange, classification, durationSeconds, totalScore) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0] && tabs[0].id) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          type: 'POINT_UPDATE',
-          payload: { pointsChange, domain, classification, durationSeconds, totalScore }
-        }).catch(() => {
-          // Ignore errors if content script not loaded (e.g., restricted pages)
-        });
-      }
+    const sign = pointsChange > 0 ? '+' : '';
+    const title = `${sign}${pointsChange} POINTS on ${domain}`;
+    const message = `Total Score: ${totalScore} \nTime spent: ${durationSeconds} seconds`;
+    
+    // Create a native system notification
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      title: title,
+      message: message,
+      priority: 2
     });
   }
 };
