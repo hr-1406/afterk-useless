@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "description": "A ridiculous productivity enforcement Chrome extension that traps you when you procrastinate.",
   "background": {
-    "service_worker": "background/service-worker.js",
-    "type": "module"
+    "service_worker": "background/service-worker.js"
   },
   "action": {},
   "options_page": "options/options.html",

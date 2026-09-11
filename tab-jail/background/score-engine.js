@@ -55,25 +55,25 @@ async function saveAndBroadcast(oldScore, reason) {
     });
 }
 
-export async function addPoints(amount, reason) {
+async function addPoints(amount, reason) {
     if (breakEndTime) return; // No productivity gain during break
     const oldScore = currentScore;
     currentScore = Math.min(100, currentScore + amount);
     await saveAndBroadcast(oldScore, reason);
 }
 
-export async function removePoints(amount, reason) {
+async function removePoints(amount, reason) {
     if (breakEndTime) return; // No penalty during break
     const oldScore = currentScore;
     currentScore = Math.max(0, currentScore - amount);
     await saveAndBroadcast(oldScore, reason);
 }
 
-export function getScore() {
+function getScore() {
     return currentScore;
 }
 
-export async function checkBreakState() {
+async function checkBreakState() {
     if (breakEndTime && Date.now() >= breakEndTime) {
         breakEndTime = null;
         const oldScore = currentScore;
@@ -82,3 +82,5 @@ export async function checkBreakState() {
         await saveAndBroadcast(oldScore, "break_ended");
     }
 }
+
+self.scoreEngine = { addPoints, removePoints, getScore, checkBreakState };

@@ -4,8 +4,7 @@
 // Orchestrates: website classification, activity state, scoring,
 // and the toolbar toggle for the persistent HUD.
 
-import { classifyWebsite } from './website-classifier.js';
-import * as scoreEngine from './score-engine.js';
+importScripts('website-classifier.js', 'score-engine.js');
 
 console.log("TAB JAIL service worker started");
 

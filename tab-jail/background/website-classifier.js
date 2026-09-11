@@ -28,7 +28,7 @@ const DISTRACTING_DOMAINS = [
     "twitch.tv"
 ];
 
-export function classifyWebsite(urlStr) {
+function classifyWebsite(urlStr) {
     if (!urlStr || typeof urlStr !== 'string') {
         return "unknown";
     }
@@ -55,3 +55,5 @@ export function classifyWebsite(urlStr) {
 
     return "unknown";
 }
+
+self.classifyWebsite = classifyWebsite;
