@@ -191,16 +191,4 @@ chrome.runtime.onMessage.addListener((message, sender) => {
     }
 });
 
-// =============================================================
-// Toolbar Icon → Toggle Persistent HUD
-// =============================================================
-chrome.action.onClicked.addListener(async () => {
-    try {
-        const data = await chrome.storage.local.get(['hudEnabled']);
-        const newState = !(data.hudEnabled === true);
-        await chrome.storage.local.set({ hudEnabled: newState });
-        console.log(`TAB JAIL HUD toggled: ${newState}`);
-    } catch (err) {
-        console.error("TAB JAIL toggle error:", err);
-    }
-});
+// Persistent HUD toggled via options.html instead of toolbar click
