@@ -6,7 +6,7 @@
 
 
 ## Basic Details
-### Team Name: Tab Jailers
+### Team Name: AfterK
 
 
 ### Team Members
